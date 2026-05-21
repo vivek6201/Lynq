@@ -1,0 +1,21 @@
+{
+    "name": "api",
+    "projectType": "application",
+    "sourceRoot": "apps/api",
+    "targets": {
+        "dev": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "$(go env GOPATH)/bin/air",
+                "cwd": "apps/api"
+            }
+        },
+        "build": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "go build -o bin/api ./cmd/server",
+                "cwd": "apps/api"
+            }
+        }
+    }
+}
