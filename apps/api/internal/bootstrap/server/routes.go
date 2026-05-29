@@ -33,13 +33,12 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, rdb *redis.Client, cfg *config.Con
 		authRoutes.Get("/google/login", authHandler.GoogleLoginHandler)
 		authRoutes.Get("/google/callback", authHandler.GoogleCallbackHandler)
 		authRoutes.Post("/register/complete", authHandler.CompleteRegisterHandler)
-		authRoutes.Post("/logout", middleware.AuthMiddleware(db), authHandler.LogoutHandler)
+		authRoutes.Post("/logout", middleware.AuthMiddleware(db, cfg.JWT_SECRET), authHandler.LogoutHandler)
 	}
 
 	// Register User Endpoints
-	userRoutes := v1.Group("/users", middleware.AuthMiddleware(db))
+	userRoutes := v1.Group("/users", middleware.AuthMiddleware(db, cfg.JWT_SECRET))
 	{
 		userRoutes.Get("/me", userHandler.GetUserHandler)
 	}
-
 }

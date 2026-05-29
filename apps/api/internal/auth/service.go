@@ -21,6 +21,7 @@ import (
 type VerificationResult struct {
 	Registered bool
 	SessionID  string
+	UserID     uuid.UUID
 	ExpiresAt  time.Time
 	TempUserID uuid.UUID
 }
@@ -28,12 +29,14 @@ type VerificationResult struct {
 type GoogleAuthResult struct {
 	Registered bool
 	SessionID  string
+	UserID     uuid.UUID
 	ExpiresAt  time.Time
 	TempUserID uuid.UUID
 }
 
 type SessionResult struct {
 	SessionID string
+	UserID    uuid.UUID
 	ExpiresAt time.Time
 }
 
@@ -171,6 +174,7 @@ func (s *AuthService) VerifyOTP(email string, otp string, ip string, ua string) 
 	return &VerificationResult{
 		Registered: true,
 		SessionID:  sessionID,
+		UserID:     user.ID,
 		ExpiresAt:  expiresAt,
 	}, nil
 }
@@ -264,6 +268,7 @@ func (s *AuthService) GoogleCallback(code string, ip string, ua string) (*Google
 	return &GoogleAuthResult{
 		Registered: true,
 		SessionID:  sessionID,
+		UserID:     user.ID,
 		ExpiresAt:  expiresAt,
 	}, nil
 }
@@ -340,6 +345,7 @@ func (s *AuthService) CompleteOnboarding(tempUserID uuid.UUID, username string, 
 
 	return &SessionResult{
 		SessionID: sessionID,
+		UserID:    newUserID,
 		ExpiresAt: expiresAt,
 	}, nil
 }

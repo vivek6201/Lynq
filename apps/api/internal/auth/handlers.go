@@ -37,6 +37,8 @@ type completeRegisterRequest struct {
 	Username   string `json:"username" validate:"required"`
 }
 
+// Send OTP to user's email for login
+
 func (h *AuthHandler) SendOTPHandler(c fiber.Ctx) error {
 	var req sendOTPRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -50,6 +52,8 @@ func (h *AuthHandler) SendOTPHandler(c fiber.Ctx) error {
 
 	return utils.SendSuccess(c, fiber.StatusOK, "OTP sent successfully", nil)
 }
+
+// Verify OTP and generate session token
 
 func (h *AuthHandler) VerifyOTPHandler(c fiber.Ctx) error {
 	var req verifyOTPRequest
@@ -65,29 +69,35 @@ func (h *AuthHandler) VerifyOTPHandler(c fiber.Ctx) error {
 		return utils.SendError(c, fiber.StatusUnauthorized, "Verification failed", err)
 	}
 
-	if result.Registered {
-		// Set HTTP-only Cookie
-		c.Cookie(&fiber.Cookie{
-			Name:     "session_id",
-			Value:    result.SessionID,
-			Path:     "/",
-			HTTPOnly: true,
-			Secure:   false, // Set to true if deploying over HTTPS
-			Expires:  result.ExpiresAt,
-		})
-
-		return utils.SendSuccess(c, fiber.StatusOK, "Login successful", fiber.Map{
-			"registered": true,
-			"session_id": result.SessionID,
-			"expires_at": result.ExpiresAt,
+	if !result.Registered {
+		return utils.SendSuccess(c, fiber.StatusOK, "Email verified, onboarding pending", fiber.Map{
+			"registered":   false,
+			"temp_user_id": result.TempUserID,
 		})
 	}
 
-	return utils.SendSuccess(c, fiber.StatusOK, "Email verified, onboarding pending", fiber.Map{
-		"registered":   false,
-		"temp_user_id": result.TempUserID,
+	sessionToken, err := utils.GenerateJWTToken(result.SessionID, result.UserID.String(), result.ExpiresAt, h.cfg.JWT_SECRET)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to generate session token", err)
+	}
+	// Set HTTP-only Cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   false, // Set to true if deploying over HTTPS
+		Expires:  result.ExpiresAt,
+	})
+
+	return utils.SendSuccess(c, fiber.StatusOK, "Login successful", fiber.Map{
+		"registered":    true,
+		"session_token": sessionToken,
+		"expires_at":    result.ExpiresAt,
 	})
 }
+
+// Google Login Handler
 
 func (h *AuthHandler) GoogleLoginHandler(c fiber.Ctx) error {
 	// Generate random OAuth state to prevent CSRF
@@ -110,6 +120,8 @@ func (h *AuthHandler) GoogleLoginHandler(c fiber.Ctx) error {
 	redirectURL := h.service.GetGoogleAuthURL(state)
 	return c.Redirect().To(redirectURL)
 }
+
+// Google Callback Handler
 
 func (h *AuthHandler) GoogleCallbackHandler(c fiber.Ctx) error {
 	state := c.Query("state")
@@ -143,25 +155,32 @@ func (h *AuthHandler) GoogleCallbackHandler(c fiber.Ctx) error {
 		return utils.SendError(c, fiber.StatusBadRequest, "Google authentication failed", err)
 	}
 
-	if result.Registered {
-		// Existing user login: Set Session ID Cookie and redirect to dashboard
-		c.Cookie(&fiber.Cookie{
-			Name:     "session_id",
-			Value:    result.SessionID,
-			Path:     "/",
-			HTTPOnly: true,
-			Secure:   false,
-			Expires:  result.ExpiresAt,
-		})
-
-		redirectURL := h.cfg.FRONTEND_URL + "/auth/callback?session_id=" + result.SessionID + "&registered=true"
+	if !result.Registered {
+		// New user signup: Redirect to select username on frontend
+		redirectURL := h.cfg.FRONTEND_URL + "/auth?temp_user_id=" + result.TempUserID.String() + "&registered=false"
 		return c.Redirect().To(redirectURL)
 	}
 
-	// New user signup: Redirect to select username on frontend
-	redirectURL := h.cfg.FRONTEND_URL + "/register/username?temp_user_id=" + result.TempUserID.String() + "&registered=false"
+	sessionToken, err := utils.GenerateJWTToken(result.SessionID, result.UserID.String(), result.ExpiresAt, h.cfg.JWT_SECRET)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to generate session token", err)
+	}
+	// Existing user login: Set Session ID Cookie and redirect to dashboard
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   false,
+		Expires:  result.ExpiresAt,
+	})
+
+	redirectURL := h.cfg.FRONTEND_URL + "/auth/callback?session_token=" + sessionToken + "&registered=true"
 	return c.Redirect().To(redirectURL)
+
 }
+
+// Complete Register Handler
 
 func (h *AuthHandler) CompleteRegisterHandler(c fiber.Ctx) error {
 	var req completeRegisterRequest
@@ -183,9 +202,13 @@ func (h *AuthHandler) CompleteRegisterHandler(c fiber.Ctx) error {
 	}
 
 	// Set HTTP-only Cookie
+	sessionToken, err := utils.GenerateJWTToken(result.SessionID, result.UserID.String(), result.ExpiresAt, h.cfg.JWT_SECRET)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to generate session token", err)
+	}
 	c.Cookie(&fiber.Cookie{
-		Name:     "session_id",
-		Value:    result.SessionID,
+		Name:     "session_token",
+		Value:    sessionToken,
 		Path:     "/",
 		HTTPOnly: true,
 		Secure:   false,
@@ -193,10 +216,12 @@ func (h *AuthHandler) CompleteRegisterHandler(c fiber.Ctx) error {
 	})
 
 	return utils.SendSuccess(c, fiber.StatusOK, "Registration onboarding completed", fiber.Map{
-		"session_id": result.SessionID,
-		"expires_at": result.ExpiresAt,
+		"session_token": sessionToken,
+		"expires_at":    result.ExpiresAt,
 	})
 }
+
+// Logout Handler
 
 func (h *AuthHandler) LogoutHandler(c fiber.Ctx) error {
 	sessionID, ok := c.Locals("sessionID").(string)
@@ -211,7 +236,7 @@ func (h *AuthHandler) LogoutHandler(c fiber.Ctx) error {
 
 	// Clear Cookie
 	c.Cookie(&fiber.Cookie{
-		Name:     "session_id",
+		Name:     "session_token",
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,

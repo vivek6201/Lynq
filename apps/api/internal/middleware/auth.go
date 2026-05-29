@@ -14,32 +14,37 @@ import (
 	"gorm.io/gorm"
 )
 
-func AuthMiddleware(db *gorm.DB) fiber.Handler {
+func AuthMiddleware(db *gorm.DB, secret string) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		log.Println("[DEBUG] AuthMiddleware executed")
-		var sessionID string
+		var sessionToken string
 
-		// 1. Try to read from Authorization header: Bearer <session_id>
+		// 1. Try to read from Authorization header: Bearer <session_token>
 		authHeader := c.Get("Authorization")
 		if authHeader != "" {
 			parts := strings.Split(authHeader, " ")
 			if len(parts) == 2 && parts[0] == "Bearer" {
-				sessionID = parts[1]
+				sessionToken = parts[1]
 			}
 		}
 
 		// 2. Fallback to cookie
-		if sessionID == "" {
-			sessionID = c.Cookies("session_id")
+		if sessionToken == "" {
+			sessionToken = c.Cookies("session_token")
 		}
 
-		if sessionID == "" {
-			return utils.SendError(c, fiber.StatusUnauthorized, "Missing session identifier", nil)
+		if sessionToken == "" {
+			return utils.SendError(c, fiber.StatusUnauthorized, "Missing session token", nil)
+		}
+
+		// Parse the signed JWT session token
+		sessionID, userIDStr, err := utils.ParseJWTToken(sessionToken, secret)
+		if err != nil {
+			return utils.SendError(c, fiber.StatusUnauthorized, "Invalid or expired session token", err)
 		}
 
 		// 3. Query the session in the database
 		var session models.Session
-		if err := db.Where("id = ?", sessionID).First(&session).Error; err != nil {
+		if err := db.Where("id = ? AND user_id = ?", sessionID, userIDStr).First(&session).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return utils.SendError(c, fiber.StatusUnauthorized, "Invalid or expired session", err)
 			}
@@ -92,10 +97,14 @@ func AuthMiddleware(db *gorm.DB) fiber.Handler {
 			session.LastRotatedAt = time.Now()
 
 			// Set response headers and cookies with new session ID
-			c.Set("X-New-Session-Id", newSessionID)
+			newSessionToken, err := utils.GenerateJWTToken(newSessionID, session.UserID.String(), session.ExpiresAt, secret)
+			if err != nil {
+				return utils.SendError(c, fiber.StatusInternalServerError, "Failed to generate rotated session token", err)
+			}
+			c.Set("X-New-Session-Token", newSessionToken)
 			c.Cookie(&fiber.Cookie{
-				Name:     "session_id",
-				Value:    newSessionID,
+				Name:     "session_token",
+				Value:    newSessionToken,
 				Path:     "/",
 				HTTPOnly: true,
 				Secure:   false, // Set to true if deploying over HTTPS

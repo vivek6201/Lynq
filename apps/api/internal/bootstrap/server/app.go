@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/vivek6201/lynq/api/internal/config"
 	"github.com/vivek6201/lynq/api/internal/database"
 	"github.com/vivek6201/lynq/api/internal/middleware"
@@ -49,9 +50,13 @@ func StartServer() {
 
 	// Use custom logger middleware
 	app.Use(middleware.LoggerMiddleware())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	}))
 
 	SetupRoutes(app, db, rdb, cfg)
-	log.Printf("Starting server on port %s...", cfg.PORT)
 	if err := app.Listen(":" + cfg.PORT); err != nil {
 		log.Fatalf("Server failed to listen: %v", err)
 	}
