@@ -1,15 +1,34 @@
 package config
 
-import "os"
+import (
+	"os"
+)
 
 type ConfigVar struct {
-	DB_URL string
-	PORT   string
+	DB_URL               string
+	PORT                 string
+	REDIS_URL            string
+	GOOGLE_CLIENT_ID     string
+	GOOGLE_CLIENT_SECRET string
+	GOOGLE_REDIRECT_URL  string
+	FRONTEND_URL         string
 }
 
 func LoadConfig() *ConfigVar {
 	return &ConfigVar{
-		DB_URL: os.Getenv("DB_URL"),
-		PORT:   os.Getenv("PORT"),
+		DB_URL:               getEnv("DB_URL", "postgres://postgres:postgres@localhost:5432/lynq_db?sslmode=disable"),
+		PORT:                 getEnv("PORT", "8000"),
+		REDIS_URL:            getEnv("REDIS_URL", "localhost:6379"),
+		GOOGLE_CLIENT_ID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GOOGLE_CLIENT_SECRET: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GOOGLE_REDIRECT_URL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8000/api/v1/auth/google/callback"),
+		FRONTEND_URL:         getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }

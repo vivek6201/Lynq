@@ -55,3 +55,6 @@ out
 # ENV variables
 .env
 .env.local
+
+# Go binaries
+/apps/*/bin

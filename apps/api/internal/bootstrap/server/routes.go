@@ -1,49 +1,45 @@
 package bootstrap
 
 import (
-	"log"
-
 	"github.com/gofiber/fiber/v3"
+	"github.com/redis/go-redis/v9"
 	"github.com/vivek6201/lynq/api/internal/auth"
 	"github.com/vivek6201/lynq/api/internal/config"
-	"github.com/vivek6201/lynq/api/internal/database"
+	"github.com/vivek6201/lynq/api/internal/middleware"
+	"github.com/vivek6201/lynq/api/internal/users"
+	"github.com/vivek6201/lynq/api/internal/utils"
+	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App) {
-	cfg := config.LoadConfig()
+func SetupRoutes(app *fiber.App, db *gorm.DB, rdb *redis.Client, cfg *config.ConfigVar) {
+	// Initialize user layers first since auth layer depends on it
+	userRepo := users.NewRepository(db, rdb)
+	userService := users.NewUserService(userRepo, cfg)
+	userHandler := users.NewUserHandler(userService, cfg)
 
-	db, err := database.ConnectDB(cfg.DB_URL)
-	if err != nil {
-		log.Fatal("Failed to connect to database")
-	}
-
-	authRepo := auth.NewRepository(db)
-	authService := auth.NewService(authRepo)
-	authHandler := auth.NewHandler(authService)
+	// Initialize helpers & auth layers
+	mockEmail := utils.NewMockEmailSender()
+	authRepo := auth.NewRepository(db, rdb)
+	authService := auth.NewService(authRepo, userService, mockEmail, cfg)
+	authHandler := auth.NewHandler(authService, cfg)
 
 	v1 := app.Group("/api/v1")
+
+	// Register Authentication Endpoints
 	authRoutes := v1.Group("/auth")
 	{
-		authRoutes.Post("/register", authHandler.RegisterHandler)
-		authRoutes.Post("/login", authHandler.LoginHandler)
-		authRoutes.Post("/refresh", authHandler.RefreshHandler)
+		authRoutes.Post("/otp/send", authHandler.SendOTPHandler)
+		authRoutes.Post("/otp/verify", authHandler.VerifyOTPHandler)
+		authRoutes.Get("/google/login", authHandler.GoogleLoginHandler)
+		authRoutes.Get("/google/callback", authHandler.GoogleCallbackHandler)
+		authRoutes.Post("/register/complete", authHandler.CompleteRegisterHandler)
+		authRoutes.Post("/logout", middleware.AuthMiddleware(db), authHandler.LogoutHandler)
 	}
 
-	userRoutes := v1.Group("/user")
+	// Register User Endpoints
+	userRoutes := v1.Group("/users", middleware.AuthMiddleware(db))
 	{
-
-	}
-
-	linkRoutes := v1.Group("/links")
-	{
-		// POST, GET, DELETE with auth middleware
-
-	}
-
-	analyticsRoutes := v1.Group("/analytics")
-	{
-		// GET with auth middleware
-
+		userRoutes.Get("/me", userHandler.GetUserHandler)
 	}
 
 }
