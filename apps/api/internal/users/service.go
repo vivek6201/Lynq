@@ -2,19 +2,16 @@ package users
 
 import (
 	"github.com/google/uuid"
-	"github.com/vivek6201/lynq/api/internal/config"
 	"github.com/vivek6201/lynq/api/internal/models"
 )
 
 type UserService struct {
 	repo *UserRepository
-	cfg  *config.ConfigVar
 }
 
-func NewUserService(repo *UserRepository, cfg *config.ConfigVar) *UserService {
+func NewUserService(repo *UserRepository) *UserService {
 	return &UserService{
 		repo: repo,
-		cfg:  cfg,
 	}
 }
 

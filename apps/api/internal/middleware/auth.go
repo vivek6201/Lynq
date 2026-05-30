@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"log"
 	"strings"
 	"time"
 
@@ -115,7 +114,6 @@ func AuthMiddleware(db *gorm.DB, secret string) fiber.Handler {
 		// 6. Set variables in context locals
 		c.Locals("userID", session.UserID.String())
 		c.Locals("sessionID", sessionID)
-		log.Printf("[DEBUG] AuthMiddleware - Setting Locals(\"userID\"): %s", session.UserID.String())
 
 		return c.Next()
 	}

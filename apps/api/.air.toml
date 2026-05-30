@@ -4,9 +4,13 @@ tmp_dir = "tmp"
 [build]
 cmd = "go build -o tmp/main ./cmd/server"
 bin = "tmp/main"
+exclude_dir = ["tmp", "bin"]
 
 delay = 2000
 stop_on_error = true
 send_interrupt = true
 kill_delay = "500ms"
 rerun = false
+
+[misc]
+clean_on_exit = true

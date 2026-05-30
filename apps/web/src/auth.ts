@@ -10,7 +10,7 @@ const parseJwt = (token: string) => {
       atob(base64)
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .join(''),
     );
     return JSON.parse(jsonPayload);
   } catch (e) {
@@ -18,7 +18,12 @@ const parseJwt = (token: string) => {
   }
 };
 
-const { handlers: authHandlers, signIn: authSignIn, signOut: authSignOut, auth: authHandler } = NextAuth({
+const {
+  handlers: authHandlers,
+  signIn: authSignIn,
+  signOut: authSignOut,
+  auth,
+} = NextAuth({
   providers: [
     Credentials({
       name: 'Credentials',
@@ -63,10 +68,11 @@ const { handlers: authHandlers, signIn: authSignIn, signOut: authSignOut, auth: 
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.AUTH_SECRET || 'development-only-fallback-secret-for-lynq-frontend-app',
+  secret:
+    process.env.AUTH_SECRET ||
+    'development-only-fallback-secret-for-lynq-frontend-app',
 });
 
 export const handlers = authHandlers;
-export const auth = authHandler;
 export const signIn = authSignIn as any;
 export const signOut = authSignOut as any;

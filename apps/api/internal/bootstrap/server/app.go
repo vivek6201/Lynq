@@ -28,12 +28,6 @@ func StartServer() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run GORM AutoMigrations
-	if err := database.MigrateDB(db); err != nil {
-		log.Fatalf("Failed to run database migrations: %v", err)
-	}
-	log.Println("Database migrated successfully")
-
 	// 2. Connect to Redis
 	rdb, err := database.ConnectRedis(cfg.REDIS_URL)
 	if err != nil {

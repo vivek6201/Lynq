@@ -23,6 +23,27 @@
         "command": "go mod tidy",
         "cwd": "apps/api"
       }
+    },
+    "db:generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run github.com/joho/godotenv/cmd/godotenv@latest -f .env atlas migrate diff schema_update --env local",
+        "cwd": "apps/api"
+      }
+    },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run github.com/joho/godotenv/cmd/godotenv@latest -f .env atlas migrate apply --env local",
+        "cwd": "apps/api"
+      }
+    },
+    "db:status": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run github.com/joho/godotenv/cmd/godotenv@latest -f .env atlas migrate status --env local",
+        "cwd": "apps/api"
+      }
     }
   }
 }

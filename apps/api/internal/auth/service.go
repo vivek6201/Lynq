@@ -306,8 +306,6 @@ func (s *AuthService) CompleteOnboarding(tempUserID uuid.UUID, username string, 
 		ID:          newUserID,
 		Username:    username,
 		Email:       tempUser.Email,
-		DisplayName: tempUser.DisplayName,
-		AvatarURL:   tempUser.AvatarURL,
 	}
 
 	err = s.usersService.CompleteOnboarding(&user, tempUser.ID)
