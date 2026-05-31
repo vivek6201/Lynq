@@ -1,10 +1,13 @@
 package links
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/vivek6201/lynq/api/internal/config"
 	"github.com/vivek6201/lynq/api/internal/utils"
+	"gorm.io/gorm"
 )
 
 type LinkHandler struct {
@@ -53,7 +56,7 @@ func (h *LinkHandler) GetAllUserLinksHandler(c fiber.Ctx) error {
 
 	id, err := uuid.Parse(userID)
 	if err != nil {
-		return utils.SendError(c, fiber.StatusBadRequest, "Invalid user ID", nil)
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid user ID", err)
 	}
 
 	links, err := h.service.GetAllUserLinks(id)
@@ -65,13 +68,89 @@ func (h *LinkHandler) GetAllUserLinksHandler(c fiber.Ctx) error {
 }
 
 func (h *LinkHandler) GetLinkByIdHandler(c fiber.Ctx) error {
-	return utils.SendSuccess(c, fiber.StatusOK, "Not implemented yet", nil)
+	userID, ok := c.Locals("userID").(string)
+
+	if !ok || userID == "" {
+		return utils.SendError(c, fiber.StatusBadRequest, "No user found", nil)
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid userId", err)
+	}
+
+	linkID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid linkId", err)
+	}
+
+	link, err := h.service.GetLinkById(linkID, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return utils.SendError(c, fiber.StatusNotFound, "Link not found", err)
+		}
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to get link by id", err)
+	}
+
+	return utils.SendSuccess(c, fiber.StatusOK, "Link fetched successfully", link)
 }
 
 func (h *LinkHandler) UpdateLinkHandler(c fiber.Ctx) error {
-	return utils.SendSuccess(c, fiber.StatusOK, "Not implemented yet", nil)
+	var linkData UpdateLinkRequest
+
+	if err := c.Bind().JSON(&linkData); err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid request payload", err)
+	}
+
+	linkId, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid linkId", err)
+	}
+
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		return utils.SendError(c, fiber.StatusBadRequest, "No userId found", nil)
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid userId", err)
+	}
+
+	link, err := h.service.UpdateLink(linkId, id, linkData)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return utils.SendError(c, fiber.StatusNotFound, "Link not found", err)
+		}
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to update link", err)
+	}
+
+	return utils.SendSuccess(c, fiber.StatusOK, "Link updated successfully", link)
 }
 
 func (h *LinkHandler) DeleteLinkHandler(c fiber.Ctx) error {
-	return utils.SendSuccess(c, fiber.StatusOK, "Not implemented yet", nil)
+	linkId, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid linkId", err)
+	}
+
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		return utils.SendError(c, fiber.StatusBadRequest, "No userId found", nil)
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid userId", err)
+	}
+
+	err = h.service.DeleteLinkByID(linkId, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return utils.SendError(c, fiber.StatusNotFound, "Link not found", err)
+		}
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to delete link", err)
+	}
+
+	return utils.SendSuccess(c, fiber.StatusOK, "Link deleted successfully", nil)
 }

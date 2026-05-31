@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	ariga.io/atlas-provider-gorm v0.6.1 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

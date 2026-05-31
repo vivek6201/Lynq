@@ -6,6 +6,13 @@
     "dev": {
       "executor": "nx:run-commands",
       "options": {
+        "command": "docker compose up --build",
+        "cwd": "apps/api"
+      }
+    },
+    "dev:local": {
+      "executor": "nx:run-commands",
+      "options": {
         "commands": [
           "$(go env GOPATH)/bin/air -c .air.toml",
           "$(go env GOPATH)/bin/air -c .air.worker.toml"

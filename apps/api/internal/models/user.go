@@ -32,6 +32,7 @@ type Profile struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	UserID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
+	User   User      `gorm:"constraint:OnDelete:CASCADE;"`
 
 	Username    string `gorm:"size:32;uniqueIndex;not null"`
 	DisplayName string `gorm:"size:100"`
@@ -49,6 +50,7 @@ type Session struct {
 	ID string `gorm:"primaryKey;size:255"`
 
 	UserID        uuid.UUID `gorm:"type:uuid;not null;index"`
+	User          User      `gorm:"constraint:OnDelete:CASCADE;"`
 	Provider      string    `gorm:"size:20;not null"` // "google" or "email_otp"
 	IPAddress     string    `gorm:"size:45"`          // Supports IPv4 and IPv6
 	UserAgent     string    `gorm:"type:text"`

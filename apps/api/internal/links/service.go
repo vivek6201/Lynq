@@ -37,3 +37,35 @@ func (s *LinkService) CreateLink(userID uuid.UUID, req *CreateLinkRequest) (*mod
 func (s *LinkService) GetAllUserLinks(userId uuid.UUID) ([]UserLinkResponse, error) {
 	return s.repository.GetAllUserLinks(userId)
 }
+
+func (s *LinkService) UpdateLink(linkId uuid.UUID, id uuid.UUID, linkData UpdateLinkRequest) (UserLinkResponse, error) {
+	if err := s.repository.UpdateLink(linkId, id, linkData); err != nil {
+		return UserLinkResponse{}, err
+	}
+
+	return s.GetLinkById(linkId, id)
+}
+
+func (s *LinkService) GetLinkById(id uuid.UUID, userId uuid.UUID) (UserLinkResponse, error) {
+	userLink, err := s.repository.GetLinkById(id, userId)
+
+	if err != nil {
+		return UserLinkResponse{}, err
+	}
+
+	return *userLink, nil
+}
+
+func (s *LinkService) DeleteLinkByID(id uuid.UUID, userId uuid.UUID) error {
+	_, err := s.repository.GetLinkById(id, userId)
+
+	if err != nil {
+		return err
+	}
+
+	if err := s.repository.DeleteLinkByID(id, userId); err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -10,6 +10,7 @@ type Link struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	UserID uuid.UUID `gorm:"type:uuid;not null;index"`
+	User   User      `gorm:"constraint:OnDelete:CASCADE;"`
 
 	Title       string `gorm:"size:255;not null"`
 	Description string `gorm:"type:text"`
@@ -26,6 +27,7 @@ type LinkStats struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	LinkID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
+	Link   Link      `gorm:"constraint:OnDelete:CASCADE;"`
 
 	TotalClicks int64 `gorm:"default:0"`
 
@@ -37,6 +39,7 @@ type LinkClickEvent struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	LinkID uuid.UUID `gorm:"type:uuid;not null;index"`
+	Link   Link      `gorm:"constraint:OnDelete:CASCADE;"`
 
 	Country string `gorm:"size:100"`
 	City    string `gorm:"size:100"`
@@ -54,6 +57,7 @@ type SocialLink struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	ProfileID uuid.UUID `gorm:"type:uuid;not null;index"`
+	Profile   Profile   `gorm:"constraint:OnDelete:CASCADE;"`
 	Platform  string    `gorm:"size:50"`
 	URL       string    `gorm:"type:text"`
 
@@ -65,6 +69,7 @@ type LinkAnalytics struct {
 	ID uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 
 	LinkID     uuid.UUID `gorm:"type:uuid;not null;index"`
+	Link       Link      `gorm:"constraint:OnDelete:CASCADE;"`
 	ClickCount int64     `gorm:"default:0"`
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`

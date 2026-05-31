@@ -1,0 +1,28 @@
+# Build stage
+FROM golang:alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the API binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/api ./cmd/server
+
+# ---------------------------------------------------------
+# Production image for API Server
+# ---------------------------------------------------------
+FROM alpine:latest
+
+WORKDIR /app
+COPY --from=builder /bin/api .
+
+# We need CA certificates for making HTTPS calls
+RUN apk --no-cache add ca-certificates
+
+EXPOSE 8000
+CMD ["./api"]
