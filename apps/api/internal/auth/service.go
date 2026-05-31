@@ -57,11 +57,18 @@ func (s *AuthService) SendOTP(email string) error {
 		return fmt.Errorf("failed to store OTP: %w", err)
 	}
 
+	htmlContent, err := templates.RenderTemplate("otp.html", map[string]string{
+		"OTP": otp,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to generate email template: %w", err)
+	}
+
 	payload := &worker.SendEmailPayload{
 		To:          []string{email},
 		From:        "onboarding@biolynq.in",
 		Subject:     "Verify Your Email",
-		HtmlContent: templates.OTPTemplate(otp),
+		HtmlContent: htmlContent,
 	}
 
 	// Send OTP via background worker

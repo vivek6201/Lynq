@@ -66,7 +66,7 @@ func (h *AuthHandler) VerifyOTPHandler(c fiber.Ctx) error {
 
 	result, err := h.service.VerifyOTP(req.Email, req.OTP, ip, ua)
 	if err != nil {
-		return utils.SendError(c, fiber.StatusUnauthorized, "Verification failed", err)
+		return utils.SendError(c, fiber.StatusBadRequest, "Verification failed", err)
 	}
 
 	if !result.Registered {

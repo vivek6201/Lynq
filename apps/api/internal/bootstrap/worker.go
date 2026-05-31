@@ -22,6 +22,7 @@ func StartWorker() {
 	// Initialize Worker Processor
 	processor := worker.NewRedisTaskProcessor(redisOpt, emailSender)
 
+	log.Println("Starting background worker and listening for tasks...")
 	if err := processor.Start(); err != nil {
 		log.Fatalf("Failed to start worker: %v", err)
 	}

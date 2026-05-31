@@ -40,7 +40,7 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TaskSendEmail, processor.ProcessTaskSendEmail)
 
-	return processor.server.Start(mux)
+	return processor.server.Run(mux)
 }
 
 func (processor *RedisTaskProcessor) ProcessTaskSendEmail(ctx context.Context, task *asynq.Task) error {

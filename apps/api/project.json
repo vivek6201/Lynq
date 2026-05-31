@@ -6,7 +6,11 @@
     "dev": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "$(go env GOPATH)/bin/air",
+        "commands": [
+          "$(go env GOPATH)/bin/air -c .air.toml",
+          "$(go env GOPATH)/bin/air -c .air.worker.toml"
+        ],
+        "parallel": true,
         "cwd": "apps/api"
       }
     },
