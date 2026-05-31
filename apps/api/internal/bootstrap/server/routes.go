@@ -6,22 +6,23 @@ import (
 	"github.com/vivek6201/lynq/api/internal/auth"
 	"github.com/vivek6201/lynq/api/internal/config"
 	"github.com/vivek6201/lynq/api/internal/links"
+	"github.com/hibiken/asynq"
 	"github.com/vivek6201/lynq/api/internal/middleware"
 	"github.com/vivek6201/lynq/api/internal/users"
-	"github.com/vivek6201/lynq/api/internal/utils"
+	"github.com/vivek6201/lynq/api/internal/worker"
 	"gorm.io/gorm"
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, rdb *redis.Client, cfg *config.ConfigVar) {
-	// Initialize user layers first since auth layer depends on it
+	redisOpt := asynq.RedisClientOpt{Addr: cfg.REDIS_URL}
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
 	userRepo := users.NewRepository(db, rdb)
 	userService := users.NewUserService(userRepo)
 	userHandler := users.NewUserHandler(userService, cfg)
 
 	// Initialize helpers & auth layers
-	mockEmail := utils.NewMockEmailSender()
 	authRepo := auth.NewRepository(db, rdb)
-	authService := auth.NewService(authRepo, userService, mockEmail, cfg)
+	authService := auth.NewService(authRepo, userService, taskDistributor, cfg)
 	authHandler := auth.NewHandler(authService, cfg)
 
 	linkRepo := links.NewLinkRepository(db, rdb)

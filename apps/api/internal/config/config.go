@@ -13,6 +13,7 @@ type ConfigVar struct {
 	GOOGLE_REDIRECT_URL  string
 	FRONTEND_URL         string
 	JWT_SECRET           string
+	RESEND_KEY           string
 }
 
 func LoadConfig() *ConfigVar {
@@ -25,6 +26,7 @@ func LoadConfig() *ConfigVar {
 		GOOGLE_REDIRECT_URL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8000/api/v1/auth/google/callback"),
 		FRONTEND_URL:         getEnv("FRONTEND_URL", "http://localhost:3000"),
 		JWT_SECRET:           getEnv("JWT_SECRET", "super-secret-lynq-auth-jwt-token-key-change-in-production"),
+		RESEND_KEY:           os.Getenv("RESEND_KEY"),
 	}
 }
 

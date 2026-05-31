@@ -1,24 +1,37 @@
 package utils
 
-import (
-	"log"
-)
+import "github.com/resend/resend-go/v3"
 
-type EmailSender interface {
-	SendOTP(email string, otp string) error
+type EmailParams struct {
+	To          []string
+	From        string
+	Subject     string
+	HtmlContent string
 }
 
-type MockEmailSender struct{}
-
-func NewMockEmailSender() *MockEmailSender {
-	return &MockEmailSender{}
+type EmailSender struct {
+	ResendKey string
 }
 
-func (s *MockEmailSender) SendOTP(email string, otp string) error {
-	log.Printf("\n==================================================\n"+
-		"[EMAIL] Send OTP to: %s\n"+
-		"OTP Code: %s\n"+
-		"Expires in 5 minutes\n"+
-		"==================================================\n", email, otp)
+func NewEmailSender(resendKey string) *EmailSender {
+	return &EmailSender{
+		ResendKey: resendKey,
+	}
+}
+
+func (s *EmailSender) SendEmail(params *EmailParams) error {
+	client := resend.NewClient(s.ResendKey)
+
+	request := &resend.SendEmailRequest{
+		From:    params.From,
+		To:      params.To,
+		Subject: params.Subject,
+		Html:    params.HtmlContent,
+	}
+
+	if _, err := client.Emails.Send(request); err != nil {
+		return err
+	}
+
 	return nil
 }

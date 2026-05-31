@@ -11,47 +11,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/vivek6201/lynq/api/internal/config"
 	"github.com/vivek6201/lynq/api/internal/models"
+	"github.com/vivek6201/lynq/api/internal/templates"
 	"github.com/vivek6201/lynq/api/internal/users"
-	"github.com/vivek6201/lynq/api/internal/utils"
+	"github.com/vivek6201/lynq/api/internal/worker"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"
 )
 
-type VerificationResult struct {
-	Registered bool
-	SessionID  string
-	UserID     uuid.UUID
-	ExpiresAt  time.Time
-	TempUserID uuid.UUID
-}
-
-type GoogleAuthResult struct {
-	Registered bool
-	SessionID  string
-	UserID     uuid.UUID
-	ExpiresAt  time.Time
-	TempUserID uuid.UUID
-}
-
-type SessionResult struct {
-	SessionID string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-}
-
-type AuthService struct {
-	repo         *AuthRepository
-	usersService *users.UserService
-	emailSender  utils.EmailSender
-	oauthConfig  *oauth2.Config
-}
-
-func NewService(repo *AuthRepository, usersService *users.UserService, emailSender utils.EmailSender, cfg *config.ConfigVar) *AuthService {
+func NewService(repo *AuthRepository, usersService *users.UserService, taskDistributor worker.TaskDistributor, cfg *config.ConfigVar) *AuthService {
 	return &AuthService{
-		repo:         repo,
-		usersService: usersService,
-		emailSender:  emailSender,
+		repo:            repo,
+		usersService:    usersService,
+		taskDistributor: taskDistributor,
 		oauthConfig: &oauth2.Config{
 			ClientID:     cfg.GOOGLE_CLIENT_ID,
 			ClientSecret: cfg.GOOGLE_CLIENT_SECRET,
@@ -85,10 +57,17 @@ func (s *AuthService) SendOTP(email string) error {
 		return fmt.Errorf("failed to store OTP: %w", err)
 	}
 
-	// Send OTP via email helper
-	err = s.emailSender.SendOTP(email, otp)
+	payload := &worker.SendEmailPayload{
+		To:          []string{email},
+		From:        "onboarding@biolynq.in",
+		Subject:     "Verify Your Email",
+		HtmlContent: templates.OTPTemplate(otp),
+	}
+
+	// Send OTP via background worker
+	err = s.taskDistributor.DistributeTaskSendEmail(context.Background(), payload)
 	if err != nil {
-		return fmt.Errorf("failed to send OTP email: %w", err)
+		return fmt.Errorf("failed to enqueue OTP email task: %w", err)
 	}
 
 	return nil
@@ -303,9 +282,9 @@ func (s *AuthService) CompleteOnboarding(tempUserID uuid.UUID, username string, 
 	newUserID := uuid.New()
 
 	user := models.User{
-		ID:          newUserID,
-		Username:    username,
-		Email:       tempUser.Email,
+		ID:       newUserID,
+		Username: username,
+		Email:    tempUser.Email,
 	}
 
 	err = s.usersService.CompleteOnboarding(&user, tempUser.ID)
