@@ -33,3 +33,7 @@ func (s *LinkService) CreateLink(userID uuid.UUID, req *CreateLinkRequest) (*mod
 
 	return link, nil
 }
+
+func (s *LinkService) GetAllUserLinks(userId uuid.UUID) ([]UserLinkResponse, error) {
+	return s.repository.GetAllUserLinks(userId)
+}

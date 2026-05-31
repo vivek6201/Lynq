@@ -1,6 +1,7 @@
 package links
 
 import (
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/vivek6201/lynq/api/internal/models"
 	"gorm.io/gorm"
@@ -20,4 +21,12 @@ func NewLinkRepository(db *gorm.DB, rdb *redis.Client) *LinkRepository {
 
 func (r *LinkRepository) CreateLink(link *models.Link) error {
 	return r.db.Create(link).Error
+}
+
+func (r *LinkRepository) GetAllUserLinks(userId uuid.UUID) ([]UserLinkResponse, error) {
+	var userLinks []UserLinkResponse
+
+	err := r.db.Model(&models.Link{}).Where("user_id = ?", userId).Find(&userLinks).Error
+
+	return userLinks, err
 }

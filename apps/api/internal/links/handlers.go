@@ -45,7 +45,23 @@ func (h *LinkHandler) CreateLinkHandler(c fiber.Ctx) error {
 }
 
 func (h *LinkHandler) GetAllUserLinksHandler(c fiber.Ctx) error {
-	return utils.SendSuccess(c, fiber.StatusOK, "Not implemented yet", nil)
+	userID, ok := c.Locals("userID").(string)
+
+	if !ok || userID == "" {
+		return utils.SendError(c, fiber.StatusBadRequest, "No userId found", nil)
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusBadRequest, "Invalid user ID", nil)
+	}
+
+	links, err := h.service.GetAllUserLinks(id)
+	if err != nil {
+		return utils.SendError(c, fiber.StatusInternalServerError, "Failed to get all user links", err)
+	}
+
+	return utils.SendSuccess(c, fiber.StatusOK, "All user links fetched successfully", links)
 }
 
 func (h *LinkHandler) GetLinkByIdHandler(c fiber.Ctx) error {
